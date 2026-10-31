@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Signal from the Stars</title>
+  <meta name="description" content="A cooperative classroom game: scan the star map, answer questions together, and repair the space station before the signal window closes.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A1%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="sky" aria-hidden="true"></div>
+  <noscript><p class="noscript">Signal from the Stars needs JavaScript. Turn it on and reload.</p></noscript>
+
+  <main id="app">
+
+    <!-- ============ HOME ============ -->
+    <section id="screen-home" class="screen">
+      <div class="home-hero">
+        <p class="home-kicker">Incoming transmission…</p>
+        <h1 class="title">Signal from the Stars</h1>
+        <p class="tagline">A message from a faraway planet was coming in when the station's antenna broke. Scan the star map for parts, answer questions together, and fix the signal before the window closes.</p>
+      </div>
+
+      <div class="card home-card">
+        <label class="field">
+          <span class="field-label">Your name (first name and last initial)</span>
+          <input id="nameInput" type="text" maxlength="14" autocomplete="off" placeholder="Sam R">
+        </label>
+
+        <div class="home-split">
+          <div class="home-option">
+            <h2>Join a game</h2>
+            <label class="field">
+              <span class="field-label">Room code</span>
+              <input id="codeInput" class="code-input" type="text" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+            </label>
+            <button id="joinBtn" class="btn go" type="button">Join game</button>
+          </div>
+          <div class="home-option">
+            <h2>Start a new game</h2>
+            <p>Teachers only. You'll need the teacher PIN, and you'll get a room code to share.</p>
+            <button id="hostBtn" class="btn" type="button">Host a game</button>
+          </div>
+        </div>
+        <p id="homeMsg" class="home-msg" role="alert"></p>
+      </div>
+
+      <div class="card how-card">
+        <h2>How to play</h2>
+        <ol class="how-list">
+          <li>Take turns tapping a dark tile on the star map to scan it.</li>
+          <li>Every scan asks a question, and <strong>everyone</strong> answers it.</li>
+          <li>Station parts you find repair the antenna and decode more of the alien message.</li>
+          <li>Repair every part before the questions run out to hear the whole message!</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ LOBBY ============ -->
+    <section id="screen-lobby" class="screen hidden">
+      <div class="card lobby-card">
+        <h2>Gather your crew</h2>
+        <p class="lobby-sub">Share this room code with your team:</p>
+        <div class="room-code" id="roomCode" aria-label="Room code">----</div>
+        <div class="lobby-share">
+          <button id="copyCodeBtn" class="btn small ghost" type="button">Copy code</button>
+          <button id="copyLinkBtn" class="btn small ghost" type="button">Copy join link</button>
+        </div>
+
+        <h3 class="lobby-heading">Crew</h3>
+        <p id="lobbyFacilitator" class="lobby-facilitator hidden"></p>
+        <ul id="lobbyPlayers" class="lobby-players"></ul>
+
+        <div id="lobbyHostControls" class="hidden">
+          <div class="opt-grid">
+            <label id="optSetRow" class="select-row hidden"><span>Question set</span> <select id="optSet"></select></label>
+            <label class="select-row"><span>Parts to repair</span> <select id="optTarget"><option value="6">6 (short game)</option><option value="8">8</option><option value="10" selected>10 (standard)</option><option value="12">12 (long game)</option></select></label>
+            <label class="select-row"><span>Random events</span> <select id="optEvents"><option value="off">Off</option><option value="sometimes" selected>Sometimes</option><option value="often">Often</option></select></label>
+            <label class="select-row"><span>Team Power</span> <select id="optPower"><option value="on" selected>On</option><option value="off">Off</option></select></label>
+          </div>
+          <label class="check"><input type="checkbox" id="optBig"> <span>Big buttons and text (good for K–2)</span></label>
+          <label class="check"><input type="checkbox" id="optHostPlays" checked> <span>I'm playing too (uncheck if you're only running the game)</span></label>
+          <label class="check"><input type="checkbox" id="optAutoContinue" checked> <span>Move on automatically a few seconds after each answer</span></label>
+          <label class="field msg-field">
+            <span class="field-label">Alien message the team decodes (optional)</span>
+            <input id="optMessage" type="text" maxlength="60" autocomplete="off">
+          </label>
+          <p id="lobbyQCount" class="lobby-qcount"></p>
+          <button id="startBtn" class="btn big go" type="button">Start the mission</button>
+        </div>
+        <p id="lobbyWaiting" class="lobby-waiting hidden">Waiting for the host to start the mission…</p>
+        <button id="lobbyLeaveBtn" class="btn small ghost lobby-leave" type="button">Leave</button>
+      </div>
+    </section>
+
+    <!-- ============ GAME ============ -->
+    <section id="screen-game" class="screen hidden">
+      <header class="topbar">
+        <div class="logo">Signal from the Stars</div>
+        <div class="room-chip">Room <b id="roomChip">----</b></div>
+        <button id="leaveBtn" class="btn small ghost" type="button">Leave</button>
+      </header>
+
+      <div class="decoder" aria-label="Alien message">
+        <div class="decoder-label"><span class="bars" id="signalBars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span> <span id="decoderText">Signal 0%</span></div>
+        <div id="message" class="message" aria-live="polite"></div>
+      </div>
+
+      <div class="game">
+        <div class="map-col">
+          <div id="turnBanner" class="turn-banner" aria-live="polite">Get ready…</div>
+          <div id="starMap" class="star-map" role="grid" aria-label="Star map"></div>
+          <p class="map-legend"><span class="lg lg-part">Part found</span><span class="lg lg-event">Surprise</span><span class="lg lg-empty">Stardust</span></p>
+        </div>
+
+        <aside class="panel">
+          <div class="card">
+            <h3 class="card-h">Station repairs</h3>
+            <div id="partSlots" class="part-slots"></div>
+            <p class="part-count"><span id="partCount">0</span> of <span id="partTotal">10</span> parts repaired</p>
+          </div>
+
+          <div class="card" id="powerCard">
+            <h3 class="card-h">Team Power</h3>
+            <div id="powerMeter" class="power-meter"><i></i><i></i><i></i></div>
+            <p class="deck-note">When the whole crew does well, the meter fills. A full meter repairs a bonus part!</p>
+          </div>
+
+          <div class="card">
+            <h3 class="card-h">Signal window</h3>
+            <div class="deck-line"><span id="deckLeft" class="deck-num">0</span><span class="deck-total">questions left</span></div>
+            <div class="bar"><div id="deckBar" class="bar-fill"></div></div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-h">Crew</h3>
+            <ul id="playerList" class="player-list"></ul>
+          </div>
+
+          <div class="card hidden" id="hostControls">
+            <h3 class="card-h">Host controls</h3>
+            <label class="check"><input type="checkbox" id="hcAutoContinue"> <span>Move on automatically after each answer</span></label>
+            <label class="check"><input type="checkbox" id="hcProjector" checked> <span>Projector-safe: hide student names on my screen</span></label>
+            <label id="hcSetRow" class="select-row hidden"><span>Question set for the next game</span> <select id="hcSet"></select></label>
+            <label class="select-row"><span>Parts for the next game</span> <select id="hcTarget"><option value="6">6 (short game)</option><option value="8">8</option><option value="10">10 (standard)</option><option value="12">12 (long game)</option></select></label>
+            <label class="select-row"><span>Random events next game</span> <select id="hcEvents"><option value="off">Off</option><option value="sometimes">Sometimes</option><option value="often">Often</option></select></label>
+            <div class="hc-buttons">
+              <button id="hcWhiteboard" class="btn small" type="button">✏️ Whiteboard</button>
+              <button id="hcNext" class="btn small ghost" type="button">Next turn</button>
+              <button id="hcReport" class="btn small ghost" type="button">📊 Class report</button>
+              <button id="restartBtn" class="btn small ghost" type="button">Restart game</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-h">Mission log</h3>
+            <ul id="logList" class="log-list"></ul>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ QUESTION MODAL ============ -->
+  <div id="qModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="qText">
+    <div class="card qcard">
+      <div class="q-top">
+        <div id="qMeta" class="q-meta"></div>
+        <button id="qRead" class="btn small ghost" type="button" aria-label="Read the question aloud">🔊 Read aloud</button>
+      </div>
+      <div id="qFound" class="q-found"></div>
+      <h2 id="qText" class="q-text"></h2>
+      <p id="qHow" class="q-how"></p>
+
+      <div id="qBody" class="q-body"></div>
+      <div id="qAnswerArea" class="q-answer">
+        <button id="qReset" class="btn small ghost hidden" type="button">Start over</button>
+        <button id="qSubmit" class="btn go" type="button" disabled>Lock in answer</button>
+      </div>
+      <p id="qWait" class="q-wait hidden"></p>
+      <div id="qHostView" class="q-hostview hidden"></div>
+      <ul id="qProgress" class="q-progress"></ul>
+
+      <div id="qReveal" class="q-reveal hidden">
+        <div id="qVerdict" class="q-verdict"></div>
+        <div id="qCorrect" class="q-correct"></div>
+        <p id="qTeam" class="q-team"></p>
+        <div id="qCountdown" class="countdown"><div class="countdown-fill"></div></div>
+      </div>
+
+      <div class="q-actions">
+        <button id="qWhiteboard" class="btn small ghost hidden" type="button">✏️ Whiteboard</button>
+        <button id="qSkip" class="btn small ghost hidden" type="button">Skip waiting</button>
+        <button id="qContinue" class="btn go hidden" type="button">Next turn</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ END MODAL ============ -->
+  <div id="endModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+    <div class="card end-card">
+      <div id="endIcon" class="end-icon" aria-hidden="true"></div>
+      <h2 id="endTitle" class="end-title"></h2>
+      <p id="endMsg" class="end-msg"></p>
+      <div id="endMessage" class="message end-message"></div>
+      <p id="endStats" class="end-stats"></p>
+      <div class="end-actions">
+        <div id="endHostOpts" class="end-opts hidden">
+          <label id="endSetRow" class="select-row hidden"><span>Question set</span> <select id="endSet"></select></label>
+          <label class="select-row"><span>Parts to repair</span> <select id="endTarget"><option value="6">6 (short game)</option><option value="8">8</option><option value="10">10 (standard)</option><option value="12">12 (long game)</option></select></label>
+          <label class="select-row"><span>Random events</span> <select id="endEvents"><option value="off">Off</option><option value="sometimes">Sometimes</option><option value="often">Often</option></select></label>
+        </div>
+        <button id="playAgainBtn" class="btn go hidden" type="button">Play again</button>
+        <button id="endReportBtn" class="btn ghost hidden" type="button">📊 View class report</button>
+        <p id="endWaiting" class="q-wait hidden">Waiting for the host to start another mission…</p>
+        <button id="endLeaveBtn" class="btn ghost" type="button">Leave game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HOST-LOST MODAL ============ -->
+  <div id="lostHostModal" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="lostHostTitle">
+    <div class="card end-card">
+      <div class="end-icon" aria-hidden="true">📴</div>
+      <h2 id="lostHostTitle" class="end-title">Lost contact with the host</h2>
+      <p class="end-msg">The host left or lost their connection. Ask your teacher to start a new room.</p>
+      <button id="lostHostBtn" class="btn" type="button">Back to start</button>
+    </div>
+  </div>
+
+  <div id="reconnectBar" class="reconnect-bar hidden" role="status">Reconnecting to the room…</div>
+
+  <!-- ============ PIN MODAL (teacher) ============ -->
+  <div id="pinModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+    <div class="card pin-card">
+      <h2 id="pinTitle">Teacher mode</h2>
+      <label class="field">
+        <span class="field-label">Enter PIN</span>
+        <input id="pinInput" type="password" autocomplete="off" maxlength="20">
+      </label>
+      <p id="pinMsg" class="home-msg" role="alert"></p>
+      <div class="pin-actions">
+        <button id="pinCancel" class="btn ghost small" type="button">Cancel</button>
+        <button id="pinOk" class="btn small" type="button">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TEACHER PANEL ============ -->
+  <div id="teacherModal" class="modal modal-wide hidden" role="dialog" aria-modal="true" aria-labelledby="tTitle">
+    <div class="card teacher-card">
+      <div class="teacher-head">
+        <h2 id="tTitle">Teacher mode: questions</h2>
+        <button id="tClose" class="btn small ghost" type="button">Close</button>
+      </div>
+      <p class="teacher-note">Questions are saved on this device only and used when this device hosts a game.</p>
+      <div class="t-sets">
+        <label class="select-row"><span>Question set</span> <select id="tSet"></select></label>
+        <button id="tSetNew" class="btn small ghost" type="button">New set</button>
+        <button id="tSetRename" class="btn small ghost" type="button">Rename</button>
+        <button id="tSetDup" class="btn small ghost" type="button">Duplicate</button>
+        <button id="tSetDelete" class="btn small ghost danger" type="button">Delete set</button>
+      </div>
+      <p id="tCount" class="teacher-count"></p>
+
+      <form id="tForm" class="t-form" autocomplete="off">
+        <h3 id="tFormTitle" class="card-h">Add a question</h3>
+        <label class="select-row"><span>Type</span>
+          <select id="tType">
+            <option value="choice">Multiple choice</option>
+            <option value="tf">True/False</option>
+            <option value="typed">Type the answer</option>
+            <option value="bank">Word bank</option>
+            <option value="order">Put in order</option>
+            <option value="match">Match</option>
+            <option value="sort">Sort</option>
+          </select>
+        </label>
+        <label class="field"><span id="tQLabel" class="field-label">Question</span>
+          <textarea id="tQ" rows="2" maxlength="250"></textarea>
+        </label>
+        <p id="tHint" class="teacher-note t-hint"></p>
+        <div id="tAnswers" class="t-answers"></div>
+        <div class="t-form-actions">
+          <button id="tSave" class="btn small go" type="submit">Add question</button>
+          <button id="tCancelEdit" class="btn small ghost hidden" type="button">Cancel</button>
+        </div>
+      </form>
+
+      <details class="t-bulk">
+        <summary>Add many at once</summary>
+        <p class="teacher-note">Paste rows copied from the question set template or from a question table (Type, Question, Answer 1 to Answer 6). One question per line; a header row is skipped automatically. You can also type multiple choice lines as <strong>question =&gt; correct | wrong 1 | wrong 2 | wrong 3</strong>.</p>
+        <textarea id="tBulk" rows="5" placeholder="What is 7 x 8? => 56 | 54 | 63 | 48"></textarea>
+        <button id="tBulkBtn" class="btn small" type="button">Add these questions</button>
+      </details>
+
+      <ul id="tList" class="t-list"></ul>
+
+      <div class="t-tools">
+        <button id="tExport" class="btn small ghost" type="button">Export file</button>
+        <label class="btn small ghost t-import">Import file<input id="tImport" type="file" accept="application/json,.json,text/csv,.csv" hidden></label>
+        <button id="tIsland" class="btn small ghost" type="button">Copy sets from Escape the Island</button>
+        <button id="tSamples" class="btn small ghost" type="button">Add sample questions</button>
+        <button id="tReport" class="btn small ghost" type="button">📊 Last game report</button>
+        <button id="tClear" class="btn small ghost danger" type="button">Delete all in this set</button>
+      </div>
+      <p class="teacher-note">Import accepts a .json file exported from this game (or Escape the Island), or a .csv file saved from the question set template. Imported questions are added to the set that is open.</p>
+    </div>
+  </div>
+
+  <!-- ============ CLASS REPORT ============ -->
+  <div id="reportModal" class="modal modal-wide hidden" role="dialog" aria-modal="true" aria-labelledby="rTitle">
+    <div class="card report-card">
+      <div class="teacher-head">
+        <h2 id="rTitle">Class report</h2>
+        <button id="rClose" class="btn small ghost" type="button">Close</button>
+      </div>
+      <p id="rMeta" class="teacher-note"></p>
+      <div id="rBody">
+        <h3 class="card-h">Student totals</h3>
+        <div class="table-wrap"><table id="rStudents" class="rtable"></table></div>
+        <h3 class="card-h">Question results</h3>
+        <div class="table-wrap"><table id="rQuestions" class="rtable"></table></div>
+      </div>
+      <p id="rEmpty" class="t-empty hidden">No report yet. Host a game and the results appear here after the first question.</p>
+      <div class="wb-actions">
+        <button id="rDownload" class="btn go" type="button">Download answers (CSV)</button>
+        <button id="rSummary" class="btn" type="button">Download summary (CSV)</button>
+        <button id="rDelete" class="btn small ghost danger" type="button">Delete report</button>
+      </div>
+      <p class="teacher-note">CSV files open in Excel or Google Sheets. Names are what students typed when they joined. The report is saved on this device only, and each new game replaces it, so download it first if you need to keep it. Questions under 60% correct are highlighted.</p>
+    </div>
+  </div>
+
+  <!-- ============ TEACHER WHITEBOARD ============ -->
+  <div id="wbModal" class="modal modal-wide hidden" role="dialog" aria-modal="true" aria-labelledby="wbTitle">
+    <div class="card wb-card">
+      <div class="teacher-head">
+        <h2 id="wbTitle">Whiteboard</h2>
+        <button id="wbClose" class="btn small ghost" type="button">Close</button>
+      </div>
+      <p class="teacher-note">Draw, then press <strong>Show to class</strong> and everyone sees it on their own screen. The game waits while you work; press <strong>Next turn</strong> when you're ready. The drawing clears when the next turn starts.</p>
+      <div class="wb-layout">
+        <div class="wb-main">
+          <div class="wb-tools">
+            <span id="wbColors" class="wb-group" role="group" aria-label="Pen colors">
+              <button class="wb-swatch active" type="button" data-color="#1f2350" style="background:#1f2350" aria-label="Navy pen"></button>
+              <button class="wb-swatch" type="button" data-color="#e0413a" style="background:#e0413a" aria-label="Red pen"></button>
+              <button class="wb-swatch" type="button" data-color="#2370c9" style="background:#2370c9" aria-label="Blue pen"></button>
+              <button class="wb-swatch" type="button" data-color="#1a9a62" style="background:#1a9a62" aria-label="Green pen"></button>
+              <button class="wb-swatch" type="button" data-color="#e88a00" style="background:#e88a00" aria-label="Orange pen"></button>
+              <button class="wb-swatch" type="button" data-color="#8a3fd1" style="background:#8a3fd1" aria-label="Purple pen"></button>
+            </span>
+            <span id="wbSizes" class="wb-group" role="group" aria-label="Pen size">
+              <button class="btn small ghost wb-size" type="button" data-w="3">Thin</button>
+              <button class="btn small ghost wb-size active" type="button" data-w="6">Medium</button>
+              <button class="btn small ghost wb-size" type="button" data-w="14">Thick</button>
+            </span>
+            <button id="wbEraser" class="btn small ghost" type="button" aria-pressed="false">Eraser</button>
+            <button id="wbUndo" class="btn small ghost" type="button">Undo</button>
+            <button id="wbClear" class="btn small ghost danger" type="button">Clear</button>
+          </div>
+          <canvas id="wbCanvas" width="1200" height="720" aria-label="Whiteboard drawing area"></canvas>
+          <div class="wb-actions">
+            <button id="wbShow" class="btn go" type="button">Show to class</button>
+            <button id="wbHide" class="btn ghost hidden" type="button">Hide from class</button>
+          </div>
+        </div>
+        <aside class="wb-side">
+          <h3 class="card-h">Current question</h3>
+          <div id="wbQ" class="wb-q"></div>
+          <div id="wbPicks" class="q-hostview"></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STUDENT VIEW OF TEACHER'S BOARD ============ -->
+  <div id="boardModal" class="modal modal-wide hidden" role="dialog" aria-modal="true" aria-labelledby="boardTitle">
+    <div class="card board-card">
+      <div class="teacher-head">
+        <h2 id="boardTitle">✏️ From your teacher</h2>
+        <button id="boardClose" class="btn small" type="button">Got it</button>
+      </div>
+      <canvas id="boardCanvas" width="1200" height="720" aria-label="Your teacher's drawing"></canvas>
+    </div>
+  </div>
+
+  <!-- ============ RANDOM EVENT SPLASH ============ -->
+  <div id="eventSplash" class="event-splash hidden" role="status" aria-live="polite">
+    <div id="eventCard" class="event-card">
+      <div id="eventEmoji" class="event-emoji" aria-hidden="true"></div>
+      <div>
+        <div id="eventTitle" class="event-title"></div>
+        <p id="eventText" class="event-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <button id="showBoardBtn" class="btn board-fab hidden" type="button">✏️ Teacher's board</button>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="confetti" class="confetti" aria-hidden="true"></div>
+  <div id="hotCorner" aria-hidden="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
