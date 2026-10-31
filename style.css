@@ -270,8 +270,9 @@ select { width: auto; max-width: 100%; }
 
 .panel { display: flex; flex-direction: column; gap: 12px; }
 .panel .card { padding: 14px 16px; }
-.part-slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.slot { aspect-ratio: 1; border-radius: 10px; border: 2px dashed var(--line); display: grid; place-items: center; font-size: 1.3rem; }
+.part-slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; container-type: inline-size; }
+/* The part picture scales with the card: about 60% of each slot, however wide the panel is. */
+.slot { aspect-ratio: 1; border-radius: 10px; border: 2px dashed var(--line); display: grid; place-items: center; font-size: 1.3rem; font-size: clamp(1.3rem, 9.5cqw, 4.5rem); line-height: 1; }
 .slot.on { border: 0; background: var(--mint); animation: pop .4s ease; }
 @keyframes pop { 0% { transform: scale(.4); } 70% { transform: scale(1.15); } 100% { transform: none; } }
 .part-count { margin: 8px 0 0; font-weight: 700; }
