@@ -707,6 +707,7 @@
       extra.picks = {};
       Object.keys(H.answers).forEach(pid => { extra.picks[pid] = { text: H.grades[pid].text, ok: H.grades[pid].ok }; });
       extra.keyText = revealKey(H.current.pub, H.current.key).text;
+      if (H.phase === 'reveal' && H.revealCount) extra.revealCount = H.revealCount;
     }
     return extra;
   }
@@ -908,10 +909,12 @@
         }
       }
     }
-    H.reveal = { key: revealKey(H.current.pub, H.current.key), right, total: who.length, power, bonus };
+    // The count of who got it right stays on the host: with a small group, students could work out who missed it.
+    H.reveal = { key: revealKey(H.current.pub, H.current.key), power, bonus };
+    H.revealCount = { right, total: who.length };
     recordQuestion();
     H.phase = 'reveal';
-    hostLog(who.length ? right + ' of ' + who.length + ' got it.' : 'Nobody answered.');
+    hostLog(who.length ? 'Answers revealed.' : 'Nobody answered.');
     broadcast();
     clearTimeout(H.timer);
     if (H.autoContinue && !H.paused) H.timer = setTimeout(hostContinue, REVEAL_MS);
@@ -1985,7 +1988,9 @@
     } else v.textContent = amPlayer() ? 'You didn\'t answer this one.' : 'Answer';
     const c = $('#qCorrect');
     c.replaceChildren(el('span', '', pub.type === 'typed' ? 'Accepted answer:' : 'Correct answer:'), correctAnswerNode(pub, reveal.key));
-    let team = reveal.total ? 'Team: ' + reveal.right + ' of ' + reveal.total + ' got it.' : '';
+    // Only the host sees how many got it, and only with projector-safe off.
+    const rc = S_extra.revealCount;
+    let team = net.role === 'host' && !S_extra.projector && rc && rc.total ? 'Team: ' + rc.right + ' of ' + rc.total + ' got it (only you see this).' : '';
     if (reveal.power) team += reveal.bonus !== null && reveal.bonus !== undefined ? '  ⚡ Team Power full! Bonus part: ' + PARTS[reveal.bonus % PARTS.length].e + ' ' + PARTS[reveal.bonus % PARTS.length].n + '!' : '  ⚡ Team Power +1!';
     $('#qTeam').textContent = team;
     const cd = $('#qCountdown');
